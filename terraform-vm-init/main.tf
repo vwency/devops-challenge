@@ -89,6 +89,13 @@ resource "libvirt_domain" "master" {
         }
       }
     ]
+    consoles = [
+      {
+        type        = "pty"
+        target_type = "serial"
+        target_port = "0"
+      }
+    ]
   }
 }
 
