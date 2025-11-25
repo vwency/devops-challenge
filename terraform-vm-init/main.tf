@@ -31,6 +31,29 @@ resource "libvirt_volume" "base_image" {
   }
 }
 
+resource "libvirt_cloudinit_disk" "master_init" {
+  name      = "master-cloudinit.iso"
+  user_data = templatefile("${path.module}/cloud-init-master.yaml", {
+    hostname = "k8s-master"
+  })
+  meta_data = yamlencode({
+    instance-id    = "k8s-master"
+    local-hostname = "k8s-master"
+  })
+}
+
+resource "libvirt_cloudinit_disk" "worker_init" {
+  count     = var.worker_count
+  name      = "worker-${count.index + 1}-cloudinit.iso"
+  user_data = templatefile("${path.module}/cloud-init-worker.yaml", {
+    hostname = "k8s-worker-${count.index + 1}"
+  })
+  meta_data = yamlencode({
+    instance-id    = "k8s-worker-${count.index + 1}"
+    local-hostname = "k8s-worker-${count.index + 1}"
+  })
+}
+
 resource "libvirt_volume" "master_volume" {
   name     = "master-disk.qcow2"
   pool     = libvirt_pool.k8s_pool.name
@@ -78,6 +101,15 @@ resource "libvirt_domain" "master" {
           dev = "vda"
           bus = "virtio"
         }
+      },
+      {
+        source = {
+          file = libvirt_cloudinit_disk.master_init.path
+        }
+        target = {
+          dev = "vdb"
+          bus = "virtio"
+        }
       }
     ]
     interfaces = [
@@ -87,6 +119,7 @@ resource "libvirt_domain" "master" {
         source = {
           network = var.network_name
         }
+        wait_for_lease = true
       }
     ]
     consoles = [
@@ -122,6 +155,15 @@ resource "libvirt_domain" "worker" {
           dev = "vda"
           bus = "virtio"
         }
+      },
+      {
+        source = {
+          file = libvirt_cloudinit_disk.worker_init[count.index].path
+        }
+        target = {
+          dev = "vdb"
+          bus = "virtio"
+        }
       }
     ]
     interfaces = [
@@ -131,6 +173,7 @@ resource "libvirt_domain" "worker" {
         source = {
           network = var.network_name
         }
+        wait_for_lease = true
       }
     ]
   }

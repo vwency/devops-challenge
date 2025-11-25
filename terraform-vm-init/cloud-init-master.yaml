@@ -1,0 +1,66 @@
+#cloud-config
+hostname: ${hostname}
+fqdn: ${hostname}.local
+manage_etc_hosts: true
+
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+    shell: /bin/bash
+    lock_passwd: false
+    plain_text_passwd: ubuntu
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFL/lvW7Va1NQTnRO8Yo+CzrX6uHJ0qFY8h211wFBjmI veniaminshp@gmail.com
+
+ssh_pwauth: true
+disable_root: false
+
+packages:
+  - openssh-server
+  - qemu-guest-agent
+
+package_update: true
+package_upgrade: false
+
+# Файл конфигурации для /etc/issue
+write_files:
+  - path: /etc/issue
+    permissions: '0644'
+    content: |
+      
+      ╔════════════════════════════════════════╗
+      ║   ${hostname}                          
+      ║   Ubuntu 22.04 LTS                     
+      ║   Login: ubuntu / ubuntu               
+      ╚════════════════════════════════════════╝
+      
+
+runcmd:
+  # Настройка GRUB для serial console
+  - |
+    cat >> /etc/default/grub << 'EOF'
+    GRUB_CMDLINE_LINUX_DEFAULT="console=tty1 console=ttyS0,115200n8"
+    GRUB_CMDLINE_LINUX="console=tty1 console=ttyS0,115200n8"
+    GRUB_TERMINAL="console serial"
+    GRUB_SERIAL_COMMAND="serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1"
+    EOF
+  - update-grub || grub2-mkconfig -o /boot/grub2/grub.cfg
+  
+  # Включаем serial console
+  - systemctl enable serial-getty@ttyS0.service
+  - systemctl start serial-getty@ttyS0.service
+  
+  # Включаем сервисы
+  - systemctl enable ssh qemu-guest-agent
+  - systemctl start ssh qemu-guest-agent
+  
+  # Отключаем firewall
+  - systemctl stop ufw || true
+  - systemctl disable ufw || true
+  
+  # Перезагружаемся чтобы применить настройки GRUB
+  - sleep 5
+  - reboot
+
+final_message: "Cloud-init complete. System ${hostname} ready!"

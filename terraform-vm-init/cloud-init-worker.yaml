@@ -1,0 +1,45 @@
+#cloud-config
+hostname: ${hostname}
+fqdn: ${hostname}.local
+manage_etc_hosts: true
+
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+    shell: /bin/bash
+    lock_passwd: false
+    plain_text_passwd: ubuntu
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFL/lvW7Va1NQTnRO8Yo+CzrX6uHJ0qFY8h211wFBjmI veniaminshp@gmail.com
+
+ssh_pwauth: true
+disable_root: false
+
+# ДОБАВЬТЕ ЭТО - настройка сети
+network:
+  version: 2
+  ethernets:
+    enp1s0:
+      dhcp4: true
+      dhcp6: false
+
+packages:
+  - openssh-server
+  - qemu-guest-agent
+  - curl
+  - wget
+  - net-tools
+
+runcmd:
+  - systemctl enable ssh
+  - systemctl start ssh
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent
+  - systemctl stop ufw || true
+  - systemctl disable ufw || true
+  # Убедиться что сеть поднята
+  - netplan apply || true
+  - dhclient -v || true
+
+final_message: "The system is ready after $UPTIME seconds"
