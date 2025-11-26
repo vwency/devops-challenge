@@ -1,17 +1,30 @@
 MASTER_MEMORY = 6096
 MASTER_CPUS = 6
 MASTER_DISK_SIZE = 35
-
 WORKER_COUNT = 3
 WORKER_MEMORY = 3024
 WORKER_CPUS = 6
 WORKER_DISK_SIZE = 10
-
 BASE_IP = "192.168.56"
+
+$setup_root = <<-SCRIPT
+  sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+  sed -i 's/^PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+  sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  sed -i 's/^PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  echo "root:root" | chpasswd
+  mkdir -p /root/.ssh
+  echo "#{File.read("#{ENV['HOME']}/.ssh/id_ed25519.pub")}" >> /root/.ssh/authorized_keys
+  chmod 700 /root/.ssh
+  chmod 600 /root/.ssh/authorized_keys
+  systemctl restart sshd
+SCRIPT
 
 Vagrant.configure("2") do |config|
   config.vm.box = "generic/ubuntu2204"
   config.vm.box_check_update = false
+  config.ssh.username = "vagrant"
+  config.ssh.insert_key = false
 
   config.vm.provider :libvirt do |libvirt|
     libvirt.driver = "kvm"
@@ -21,7 +34,6 @@ Vagrant.configure("2") do |config|
   config.vm.define "k8s-master" do |master|
     master.vm.hostname = "k8s-master"
     master.vm.network "private_network", ip: "#{BASE_IP}.10"
-
     master.vm.provider :libvirt do |v|
       v.memory = MASTER_MEMORY
       v.cpus = MASTER_CPUS
@@ -30,13 +42,13 @@ Vagrant.configure("2") do |config|
       v.disk_driver cache: "writeback"
       v.default_prefix = ""
     end
+    master.vm.provision "shell", inline: $setup_root
   end
 
   (1..WORKER_COUNT).each do |i|
     config.vm.define "k8s-worker-#{i}" do |worker|
       worker.vm.hostname = "k8s-worker-#{i}"
       worker.vm.network "private_network", ip: "#{BASE_IP}.#{10+i}"
-
       worker.vm.provider :libvirt do |v|
         v.memory = WORKER_MEMORY
         v.cpus = WORKER_CPUS
@@ -45,6 +57,7 @@ Vagrant.configure("2") do |config|
         v.disk_driver cache: "writeback"
         v.default_prefix = ""
       end
+      worker.vm.provision "shell", inline: $setup_root
     end
   end
 end
