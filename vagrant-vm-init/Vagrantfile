@@ -1,0 +1,50 @@
+MASTER_MEMORY = 6096
+MASTER_CPUS = 6
+MASTER_DISK_SIZE = 35
+
+WORKER_COUNT = 3
+WORKER_MEMORY = 3024
+WORKER_CPUS = 6
+WORKER_DISK_SIZE = 10
+
+BASE_IP = "192.168.56"
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/ubuntu2204"
+  config.vm.box_check_update = false
+
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.driver = "kvm"
+    libvirt.uri = "qemu:///system"
+  end
+
+  config.vm.define "k8s-master" do |master|
+    master.vm.hostname = "k8s-master"
+    master.vm.network "private_network", ip: "#{BASE_IP}.10"
+
+    master.vm.provider :libvirt do |v|
+      v.memory = MASTER_MEMORY
+      v.cpus = MASTER_CPUS
+      v.machine_virtual_size = MASTER_DISK_SIZE
+      v.disk_bus = "virtio"
+      v.disk_driver cache: "writeback"
+      v.default_prefix = ""
+    end
+  end
+
+  (1..WORKER_COUNT).each do |i|
+    config.vm.define "k8s-worker-#{i}" do |worker|
+      worker.vm.hostname = "k8s-worker-#{i}"
+      worker.vm.network "private_network", ip: "#{BASE_IP}.#{10+i}"
+
+      worker.vm.provider :libvirt do |v|
+        v.memory = WORKER_MEMORY
+        v.cpus = WORKER_CPUS
+        v.machine_virtual_size = WORKER_DISK_SIZE
+        v.disk_bus = "virtio"
+        v.disk_driver cache: "writeback"
+        v.default_prefix = ""
+      end
+    end
+  end
+end
