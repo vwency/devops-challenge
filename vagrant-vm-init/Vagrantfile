@@ -1,7 +1,7 @@
 MASTER_MEMORY = 6096
 MASTER_CPUS = 6
 MASTER_DISK_SIZE = 35
-WORKER_COUNT = 3
+WORKER_COUNT = 1
 WORKER_MEMORY = 3024
 WORKER_CPUS = 6
 WORKER_DISK_SIZE = 10
@@ -43,6 +43,7 @@ Vagrant.configure("2") do |config|
       v.default_prefix = ""
     end
     master.vm.provision "shell", inline: $setup_root
+    master.vm.provision "shell", path: "scripts/setup_master.sh", env: {"BASE_IP" => BASE_IP}
   end
 
   (1..WORKER_COUNT).each do |i|
@@ -58,6 +59,7 @@ Vagrant.configure("2") do |config|
         v.default_prefix = ""
       end
       worker.vm.provision "shell", inline: $setup_root
+      worker.vm.provision "shell", path: "scripts/setup_worker.sh"
     end
   end
 end
