@@ -21,19 +21,22 @@ spec:
       serviceAccountName: frontend-sa
       containers:
       - name: frontend
-        image: ghcr.io/alfa-hackers/frontend/frontend:main-20251107112355
+        image: ghcr.io/alfa-hackers/frontend/app:main
         imagePullPolicy: Always
         ports:
         - containerPort: 80
           name: http
           protocol: TCP
+        env:
+        - name: PORT
+          value: "80"
         resources:
           requests:
-            cpu: 2
-            memory: 1280Mi
+            cpu: 100m
+            memory: 128Mi
           limits:
-            cpu: 3
-            memory: 1512Mi
+            cpu: 500m
+            memory: 512Mi
         livenessProbe:
           httpGet:
             path: /
