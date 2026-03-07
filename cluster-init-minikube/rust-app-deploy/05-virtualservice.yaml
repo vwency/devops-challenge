@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: frontend
+  name: backend
   namespace: default
 spec:
   hosts:
@@ -11,9 +11,9 @@ spec:
   http:
     - match:
         - uri:
-            prefix: /
+            prefix: /api
       route:
         - destination:
-            host: frontend
+            host: backend
             port:
-              number: 80
+              number: 8080

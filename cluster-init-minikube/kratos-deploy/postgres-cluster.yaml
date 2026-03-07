@@ -1,0 +1,32 @@
+apiVersion: acid.zalan.do/v1
+kind: postgresql
+metadata:
+  name: postgres-kratos
+  namespace: kratos
+spec:
+  teamId: kratos
+  volume:
+    size: 5Gi
+    storageClass: standard
+  numberOfInstances: 3
+  postgresql:
+    version: "17"
+    parameters:
+      max_connections: "200"
+      shared_buffers: 256MB
+      log_min_duration_statement: "1000"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  users:
+    kratos:
+      - createdb
+  databases:
+    kratos: kratos
+  enableShmVolume: true
+  patroni:
+    failsafe_mode: false

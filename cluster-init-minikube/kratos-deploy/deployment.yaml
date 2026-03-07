@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kratos
+  namespace: kratos
+  labels:
+    app: kratos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kratos
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: kratos
+        version: v1
+    spec:
+      containers:
+        - name: kratos
+          image: oryd/kratos:v1.3.0
+          command:
+            - kratos
+            - serve
+            - -c
+            - /etc/config/kratos/kratos.yml
+            - --dev
+            - --watch-courier
+          ports:
+            - name: http-public
+              containerPort: 4433
+            - name: http-admin
+              containerPort: 4434
+          env:
+            - name: DSN
+              valueFrom:
+                secretKeyRef:
+                  name: kratos-dsn
+                  key: DSN
+            - name: LOG_LEVEL
+              value: debug
+          livenessProbe:
+            httpGet:
+              path: /health/alive
+              port: 4433
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 4433
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: kratos-config
+              mountPath: /etc/config/kratos
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+      volumes:
+        - name: kratos-config
+          configMap:
+            name: kratos-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kratos-public
+  namespace: kratos
+  labels:
+    app: kratos
+spec:
+  selector:
+    app: kratos
+  ports:
+    - name: http-public
+      port: 4433
+      targetPort: 4433
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kratos-admin
+  namespace: kratos
+  labels:
+    app: kratos
+spec:
+  selector:
+    app: kratos
+  ports:
+    - name: http-admin
+      port: 4434
+      targetPort: 4434

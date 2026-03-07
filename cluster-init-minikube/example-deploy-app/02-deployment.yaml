@@ -20,32 +20,32 @@ spec:
     spec:
       serviceAccountName: frontend-sa
       containers:
-      - name: frontend
-        image: ghcr.io/alfa-hackers/frontend/app:main
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 80
-          name: http
-          protocol: TCP
-        env:
-        - name: PORT
-          value: "80"
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 80
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 80
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: frontend
+          image: ghcr.io/vwency/engineer-challenge/frontend-entrypoint:master
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "80"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5

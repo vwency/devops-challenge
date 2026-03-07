@@ -1,0 +1,59 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kratos-migrate
+  namespace: kratos
+  labels:
+    app: kratos-migrate
+spec:
+  backoffLimit: 10
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: kratos-migrate
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:17-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres-kratos -p 5432 -U postgres; do
+                sleep 3
+              done
+      containers:
+        - name: kratos-migrate
+          image: oryd/kratos:v1.3.0
+          command:
+            - kratos
+            - -c
+            - /etc/config/kratos/kratos.yml
+            - migrate
+            - sql
+            - -e
+            - --yes
+          env:
+            - name: DSN
+              valueFrom:
+                secretKeyRef:
+                  name: kratos-dsn
+                  key: DSN
+          volumeMounts:
+            - name: kratos-config
+              mountPath: /etc/config/kratos
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+      volumes:
+        - name: kratos-config
+          configMap:
+            name: kratos-config

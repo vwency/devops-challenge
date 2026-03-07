@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: default
+  labels:
+    app: backend
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: v1
+    spec:
+      serviceAccountName: backend-sa
+      containers:
+        - name: backend
+          image: ghcr.io/vwency/engineer-challenge/backend:master
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: APP_ENV
+              value: "development"
+            - name: APP__KRATOS__ADMIN_URL
+              value: "http://kratos-admin.kratos.svc.cluster.local:4434"
+            - name: APP__KRATOS__PUBLIC_URL
+              value: "http://kratos-public.kratos.svc.cluster.local:4433"
+            - name: APP__KRATOS__TIMEOUT_SECS
+              value: "120"
+            - name: APP__KRATOS__CONNECT_TIMEOUT_SECS
+              value: "30"
+            - name: APP__KRATOS__POOL_IDLE_TIMEOUT_SECS
+              value: "120"
+            - name: APP__KRATOS__POOL_MAX_IDLE_PER_HOST
+              value: "10"
+            - name: APP__KRATOS__MAX_RETRIES
+              value: "3"
+            - name: APP__KRATOS__RETRY_DELAY_MS
+              value: "1000"
+            - name: APP__KRATOS__ACCEPT_INVALID_CERTS
+              value: "true"
+            - name: APP__SERVER__HOST
+              value: "0.0.0.0"
+            - name: APP__SERVER__PORT
+              value: "8080"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
